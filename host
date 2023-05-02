@@ -1,0 +1,6 @@
+[proxy]
+35.189.87.212 ansible_user=esokia
+[nodes]
+10.240.0.187 ansible_user=test11
+[nodes:vars]
+ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p esokia@35.189.87.212 -i esokia"' 

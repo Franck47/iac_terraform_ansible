@@ -1,0 +1,83 @@
+- name: Execute Config in Vm crete
+  hosts: "{{ server }}"
+  remote_user: "{{ user }}"
+  become: true
+
+  tasks:
+    
+    - name: "Suprimer Batimex"
+      shell: |
+        sudo deluser batimex
+        sudo rm -rf /home/batimex
+
+
+    - name: "Adding a project deploy key"
+      community.general:
+        api_url: https://code.esokia.io
+        api_token: "glpat-uiyDCpscuUMsdG9Nm9xT"
+        project: "Docker-Compose LAMP"
+        title: "Gitlab CI"
+        state: present
+        key: "ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAIEAiPWx6WM4lhHNedGfBpPJNPpZ7yKu+dnn1SJejgt4596k6YjzGGphH2TUxwKzxcKDKKezwkpfnxPkSMkuEspGRt/aZZ9w..."
+
+    - name: Clone a github repository
+      git:
+        repo: https://code.esokia.io/Esokia-Interne/docker-compose-lamp.git
+        dest: /home/{{server}}/data/
+        clone: yes
+        update: yes
+
+
+
+
+   
+    - name: "récupérer Data"
+      shell: |
+        git clone https://username:password@code.esokia.io/Esokia-Interne/docker-compose-lamp
+        sudo mv docker-compose-lamp /home/{{server}}/data
+        cd /home/{{server}}/data && git checkout sandbox
+
+
+    - name: Synchronization envfile customized using rsync protocol (push)
+      synchronize:
+        src: envFile
+        dest: rsync://{{server}}/home/{{user}}/data/scripts/envFile
+        
+
+    - name: Générer la base
+      command: sh /home/{{user}}/data/scripts/genDB.sh
+    
+    - name: "Execute multiple commands"
+      shell: |
+        sudo su
+        chown -R {{user}} /home/{{user}}/
+        rm -rf /home/{{user}}/data/.git
+        chown -R root:root /home/{{user}}/data/data/
+        chown -R root:{{user}} /home/{{user}}/data/logs/
+        chmod -R 777 /home/{{user}}/data/logs/
+
+    - name: Synchronization Dockerfile customized using rsync protocol (push)
+      synchronize:
+        src: Dockerfile
+        dest: rsync://{{server}}/home/fondamental/data/bin/webserver/Dockerfile
+
+    - name: Demarrer les containeurs
+      command: sh /home/{{user}}/data/scripts/startContainers.sh
+
+    - name: "donner à l'user l'access d'utiliser docker"
+      shell: |
+        sudo su
+        usermod -a -G docker {{user}}
+
+    - name: Copy the script to create database
+      copy: src=bd.sh dest=/home/{{user}}/bd.sh mode=0777
+
+    - name: "Execute multiple commands"
+      shell: |
+        cd /home/{{user}}/db.sh
+        docker exec -it test -db /bin/bash -c './bd.sh'
+
+
+
+
+

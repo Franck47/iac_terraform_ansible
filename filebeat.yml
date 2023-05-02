@@ -1,0 +1,42 @@
+- hosts: "all:!sftp"
+  become: True
+  vars:
+    filebeat_inputs:
+      - type: log
+        paths:
+          - "/var/log/unattended-upgrades/*.log"
+          - "/var/log/rkhunter.log"
+          - "/var/log/clamav/*.log"
+    filebeat_enable_logging: true
+    filebeat_log_dir: /var/log/filebeat
+    filebeat_log_filename: filebeat.log
+  roles:
+    geerlingguy.filebeat
+
+- hosts: "all:!logs"
+  become: True
+  tasks:
+    - name: Add entry in /etc/hosts to push to Graylog
+      lineinfile:
+        path: /etc/hosts
+        state: absent
+        line: 10.132.0.29 logs.placement-direct.fr
+  tags:
+    - hosts
+- hosts: "logs"
+  become: True
+  vars:
+    filebeat_inputs:
+      - type: log
+        paths:
+          - "/var/log/unattended-upgrades/*.log"
+          - "/var/log/rkhunter.log"
+          - "/var/log/clamav/*.log"
+          - "/var/log/cron/*.log"
+    filebeat_output_logstash_enabled: true
+    filebeat_output_logstash_hosts:
+      - "pld-logs:5044"
+  tags:
+    - logs
+  roles:
+    - geerlingguy.filebeat

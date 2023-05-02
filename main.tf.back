@@ -1,0 +1,43 @@
+provider "google" {
+  project     = "stable-sylph-86807"
+  region      = "europe-west2"
+}
+
+resource "google_compute_instance" "default" {
+  name         = "${var.PROJECT_NAME}"
+  machine_type = "g1-small"
+  zone         = "europe-west2-a"
+
+  tags = ["foo", "bar"]
+
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-11"
+    }
+  }
+
+  // Local SSD disk
+  //scratch_disk {
+  //  interface = "NVME"
+  //}
+
+  network_interface {
+    network = "sandbox"
+
+    access_config {
+      // Ephemeral public IP
+    }
+  }
+
+
+  metadata = {
+    foo = "bar"
+  }
+
+  metadata_startup_script = "sudo su; adduser --disabled-password ${var.PROJECT_NAME}; su $USER; ssh-keygen -t rsa; touch .ssh/authorized_keys;apt update && apt install -y git zip unzip rsync; git clone https://code.esokia.io/Esokia-Interne/docker-compose-lamp; mv docker-compose-lamp data && cd data/; git checkout sandbox; cd /home/$USER/data/scripts "
+}
+
+
+//output "ip" {
+//  value = google_compute_instance_from_machine_image.tpl.network_interface.0.network_ip
+//}

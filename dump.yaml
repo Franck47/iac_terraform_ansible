@@ -1,0 +1,9 @@
+- name: Dumper un bd
+  hosts: 192.168.88.16
+  remote_user: root
+  tasks:
+    - mysql_db: 
+        name: mysql
+        state: dump 
+        target: "/home/arnaud/dump.sql.gz"
+        login_unix_socket: /var/lib/mysql/mysql.sock

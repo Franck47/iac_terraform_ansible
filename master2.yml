@@ -1,0 +1,54 @@
+- name: ANSIBLE - Filebeat installation and configuration
+  hosts: '10.240.0.49'
+  roles:
+    - yaegashi.blockinfile
+  become: yes
+
+  tasks:
+
+  - name: APT - Add elastic.co key
+    apt_key: url="https://artifacts.elastic.co/GPG-KEY-elasticsearch"
+    
+
+  - name: APT - Add elastic.co repository
+    apt_repository: repo="deb https://artifacts.elastic.co/packages/5.x/apt stable main" filename="elastic-5.x" update_cache=yes
+    
+
+  - name: FILEBEAT - Install Filebeat
+    apt: pkg=filebeat
+    
+ 
+  - name: FILEBEAT - Copy base filebeat config file
+    copy: src=/srv/ansible/setup-files/filebeat/filebeat.yml dest=/etc/filebeat/filebeat.yml
+
+  - name: FILEBEAT - Set shipper name
+    lineinfile: "dest=/etc/filebeat/filebeat.yml state=present regexp='^name:' line='name: {{ ansible_hostname }}' insertafter='# Shipper Name'"
+ 
+  - name: FILEBEAT - Configure Logstash output
+    blockinfile:
+      dest: /etc/filebeat/filebeat.yml
+      insertafter: '# Logstash output'
+      marker: "# {mark} -- Logstash output configured by Ansible"
+      block: |
+        output.logstash:
+          hosts: ["logstashreceiver.example.com:5044"]
+
+
+  - name: FILEBEAT - Check if Nginx is installed
+    command: dpkg -l nginx
+    register: nginxinstalled
+
+  - name: FILEBEAT - Configure Nginx Logging
+    blockinfile:
+      dest: /etc/filebeat/filebeat.yml
+      insertafter: 'filebeat.prospectors:'
+      marker: "# {mark} -- Nginx logging configured by Ansible"
+      block: |
+        - input_type: log
+          paths:
+            - /var/log/nginx/*.log
+          document_type: nginx-access
+    when: nginxinstalled.rc == 0
+    
+  - name: FILEBEAT - Restart filebeat
+    service: name=filebeat state=restarted

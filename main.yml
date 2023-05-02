@@ -1,0 +1,37 @@
+- name: Execute Config in Vm crete
+  hosts: "{{ server }}"
+  remote_user: "{{ user }}"
+  become: yes
+
+  tasks:
+    
+    - name: "Recuperer les datas"
+      shell: |
+        sudo mv /home/batimex/data /home/{{user}}/
+        sudo deluser batimex
+        sudo rm -rf /home/batimex
+        sudo rm -rf /home/{{user}}/data/scripts/envFile
+        sudo rm -rf /home/{{user}}/data/.env
+        sudo rm -rf /home/{{user}}/data/bin/webserver/Dockerfile
+
+    - name: customization envfile
+      copy: src=envFile dest=/home/{{user}}/data/scripts/envFile mode=0777
+
+    - name: customization genDB.sh to Generate DB
+      copy: src=genDB.sh dest=/home/{{user}}/data/scripts/genDB.sh mode=0777
+    
+    - name: "Execute multiple commands"
+      shell: |
+        sudo bash /home/{{user}}/data/scripts/genDB.sh {{user}}
+        sudo chown -R {{user}} /home/{{user}}/
+        sudo chown -R root:root /home/{{user}}/data/data/
+        sudo chown -R root:{{user}} /home/{{user}}/data/logs/
+        sudo chmod -R 777 /home/{{user}}/data/logs/
+
+    - name: customizzation Dockerfile
+      copy: src=envFile dest=/home/{{user}}/data/bin/webserver/Dockerfile
+
+
+
+
+
